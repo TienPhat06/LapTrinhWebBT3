@@ -80,6 +80,7 @@
 package murach.survey;
 
 import java.io.*;
+import java.time.Year;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import jakarta.servlet.annotation.WebServlet;
@@ -116,17 +117,23 @@ public class SurveyServlet extends HttpServlet {
             // 2. Lấy nguồn thông tin (Radio "contactVia" trong index.html)
             String heardFrom = request.getParameter("contactVia");
 
-            // 3. Xử lý Checkbox (Cả 2 checkbox trong index.html đều đặt name="rock")
-            String[] rockOptions = request.getParameterValues("rock");
+            // 3. Xử lý Checkbox (Quét toàn bộ tham số từ index.html để không phụ thuộc tên thẻ)
             String wantRef = "No";
             String wantUpdates = "No";
 
-            if (rockOptions != null) {
-                for (String option : rockOptions) {
-                    if (option.equals("YES, I'd like that")) {
+            for (java.util.Map.Entry<String, String[]> entry : request.getParameterMap().entrySet()) {
+                String paramName = entry.getKey().toLowerCase();
+                if (paramName.equals("email") || paramName.equals("contact") || paramName.equals("contactvia")) {
+                    continue; // Bỏ qua ô nhập email và ô chọn phương thức liên hệ
+                }
+                for (String val : entry.getValue()) {
+                    String lowerVal = val.toLowerCase();
+                    if (lowerVal.contains("like that") || paramName.contains("ref")) {
                         wantRef = "Yes";
                     }
-                    if (option.equals("YES, please send me email announcement")) {
+                    if (paramName.contains("update") || paramName.contains("announcement")
+                            || lowerVal.contains("email") || lowerVal.contains("announcement")
+                            || lowerVal.equals("yes") || lowerVal.equals("on")) {
                         wantUpdates = "Yes";
                     }
                 }
@@ -143,10 +150,11 @@ public class SurveyServlet extends HttpServlet {
             survey.setWantUpdates(wantUpdates);
             survey.setContactVia(contactVia);
 
-            // 6. Lưu thông tin vào request attribute để thanks.jsp hiển thị
+            // 6. Lưu thông tin và năm hiện tại vào request attribute để survey.jsp hiển thị
             request.setAttribute("survey", survey);
+            request.setAttribute("currentYear", Year.now().getValue());
 
-            url = "/thanks.jsp";
+            url = "/survey.jsp";
         }
 
         getServletContext()
